@@ -9,8 +9,14 @@
 #
 # Normal rules (sorted alphabetically)
 #
+out/
+toolchain/
 .*
 *.a
+*.orig
+*.rej
+*.orig
+*.rej
 *.bin
 *.bz2
 *.c.[012]*.*
