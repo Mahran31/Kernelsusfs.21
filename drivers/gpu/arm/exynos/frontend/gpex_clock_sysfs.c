@@ -141,6 +141,8 @@ GPEX_STATIC ssize_t reset_time_in_state(const char *buf, size_t count)
 }
 CREATE_SYSFS_DEVICE_WRITE_FUNCTION(reset_time_in_state)
 
+/*702 MHz for 9820 and 754 MHz for 9825*/
+#define SUSTAINABLE_FREQ 702000 // KHz 
 GPEX_STATIC ssize_t set_max_lock_dvfs(const char *buf, size_t count)
 {
 	int ret, clock = 0;
@@ -154,6 +156,9 @@ GPEX_STATIC ssize_t set_max_lock_dvfs(const char *buf, size_t count)
 			GPU_LOG(MALI_EXYNOS_WARNING, "%s: invalid value\n", __func__);
 			return -ENOENT;
 		}
+				
+		if (clock < SUSTAINABLE_FREQ)
+			clock = SUSTAINABLE_FREQ;
 
 		clk_info->user_max_lock_input = clock;
 
@@ -167,10 +172,10 @@ GPEX_STATIC ssize_t set_max_lock_dvfs(const char *buf, size_t count)
 			return -ENOENT;
 		}
 
-		if (clock == gpex_clock_get_max_clock())
+/*			if (clock == gpex_clock_get_max_clock())
 			gpex_clock_lock_clock(GPU_CLOCK_MAX_UNLOCK, SYSFS_LOCK, 0);
 		else
-			gpex_clock_lock_clock(GPU_CLOCK_MAX_LOCK, SYSFS_LOCK, clock);
+			gpex_clock_lock_clock(GPU_CLOCK_MAX_LOCK, SYSFS_LOCK, clock);  */
 	}
 
 	return count;
