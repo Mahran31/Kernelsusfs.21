@@ -380,6 +380,13 @@ unsigned int calculate_efficiency(struct task_struct *p, int target_cpu)
 	}
 
 	/*
+	 * Account utilization tipping point, normally for schedutil
+	 * frequency calculation
+	 */
+	max_util += max_util >> 2;
+	
+
+	/*
 	 * 2. Find the capacity according to biggest utilization in
 	 *    coregroup.
 	 */
