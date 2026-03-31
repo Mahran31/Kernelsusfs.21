@@ -14,6 +14,10 @@ toolchain/
 .*
 *.a
 *.orig
+*.cfg
+*.dts
+*.dtsi
+*.config
 *.rej
 *.orig
 *.rej
