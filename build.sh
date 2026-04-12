@@ -244,12 +244,12 @@ if [ -z "$RECOVERY" ]; then
     fi
 
     pushd build/out/$MODEL/zip > /dev/null
-    DATE=`date +"%d-%m-%Y_%H-%M-%S"`    
+    DATE=`date +"%d-%m-%Y--%H-%M-%S"`    
 
     if [[ "$KSU_OPTION" == "y" ]]; then
-        NAME="$version"_"$MODEL"_UNOFFICIAL_KSU_"$DATE".zip
+        NAME="$MODEL"-"$version"_OFFICIAL_KSU_"$DATE".zip
     else
-        NAME="$version"_"$MODEL"_UNOFFICIAL_"$DATE".zip
+        NAME="$MODEL"-"$version"_OFFICIAL_"$DATE".zip
     fi
     zip -r ../"$NAME" .
     popd > /dev/null
