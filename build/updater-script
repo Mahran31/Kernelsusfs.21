@@ -1,24 +1,24 @@
 ui_print(" ");
-ui_print("   ***************************");
-ui_print("  **  bubuKernel-Titan v4    **");
-ui_print("  **       S10 / N10         **");
-ui_print("   ***************************");
+ui_print("  ╔═══════════════════════════╗");
+ui_print("  ║    bubuKernel-Titan v4    ║");
+ui_print("  ║         S10 / N10         ║");
+ui_print("  ╚═══════════════════════════╝");
 ui_print(" ");
 
-ui_print("  --> Writing boot.img...");
+ui_print("  [FLASH] Writing boot.img...");
 package_extract_file("files/boot.img", "/dev/block/by-name/boot");
-ui_print("  ==>  boot.img  \u2713");
+ui_print("  [ OK ]  boot.img   ✔ ");
 ui_print(" ");
 
-ui_print("  --> Writing dtb.img...");
+ui_print("  [FLASH] Writing dtb.img...");
 package_extract_file("files/dtb.img", "/dev/block/by-name/dtb");
-ui_print("  ==>  dtb.img   \u2713");
+ui_print("  [ OK ]  dtb.img    ✔ ");
 ui_print(" ");
 
-ui_print("  --> Writing dtbo.img...");
+ui_print("  [FLASH] Writing dtbo.img...");
 package_extract_file("files/dtbo.img", "/dev/block/by-name/dtbo");
-ui_print("  ==>  dtbo.img  \u2713");
+ui_print("  [ OK ]  dtbo.img   ✔ ");
 ui_print(" ");
-ui_print("  ===> Installation complete!");
+ui_print("  [ DONE ] Installation complete!");
 ui_print(" ");
 
