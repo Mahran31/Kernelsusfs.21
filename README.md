@@ -10,7 +10,8 @@ Custom kernel for Samsung Galaxy devices with integrated KSU Next (v3.1.0) and S
 * Improved compatibility and stability
 * added optimized CPU scheduler
 * optimized GPU frequency
-* Baseband Guard (coming soon)
+* Baseband Guard
+* Multimanager support
 
 ## 📱 Supported Devices
 ### Galaxy S10 Series
@@ -37,6 +38,12 @@ Custom kernel for Samsung Galaxy devices with integrated KSU Next (v3.1.0) and S
 * Ensure your ROM and recovery are compatible
 * Always take a full backup before flashing
 * Flash at your own risk
+
+## Community / Support
+
+For discussions and testing builds, join the Telegram group:
+
+💬 [Join bubuKernel Group](https://t.me/bubuKernel)
 
 ## 🙏 Credits
 - **[KSU Next developers](https://github.com/KernelSU-Next/KernelSU-Next)**
