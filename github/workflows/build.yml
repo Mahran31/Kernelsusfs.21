@@ -1,0 +1,38 @@
+name: Build bubuKernel
+
+on:
+  workflow_dispatch:
+    inputs:
+      model:
+        description: 'كود الهاتف (مثال: d2x لهاتف نوت 10 بلس)'
+        required: true
+        default: 'd2x'
+      ksu:
+        description: 'هل تريد دمج KernelSU؟ (اكتب y أو n)'
+        required: true
+        default: 'y'
+
+jobs:
+  build-kernel:
+    runs-on: ubuntu-22.04
+
+    steps:
+    - name: 1. استدعاء السورس كود
+      uses: actions/checkout@v4
+
+    - name: 2. تجهيز بيئة لينكس (Ubuntu)
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y bc bison build-essential ccache curl flex g++-multilib gcc-multilib git gnupg gperf lib32ncurses5-dev lib32readline-dev lib32z1-dev liblz4-tool libncurses5 libncurses5-dev libsdl1.2-dev libssl-dev libxml2 libxml2-utils lzop pngcrush rsync schedtool squashfs-tools xsltproc zip zlib1g-dev python3
+
+    - name: 3. تشغيل سكربت الطبخ الخاص بالمطور
+      run: |
+        chmod +x build.sh
+        ./build.sh -m ${{ github.event.inputs.model }} -k ${{ github.event.inputs.ksu }}
+
+    - name: 4. رفع الكيرنل الجاهز للتحميل
+      uses: actions/upload-artifact@v4
+      with:
+        name: Kernel-Ready-${{ github.event.inputs.model }}
+        path: build/out/${{ github.event.inputs.model }}/*.zip
+
