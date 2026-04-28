@@ -4,9 +4,9 @@ on:
   workflow_dispatch:
     inputs:
       model:
-        description: 'كود الهاتف (مثال: d2x لهاتف نوت 10 بلس)'
+        description: 'كود الهاتف (مثال: d2s لهاتف نوت 10 بلس)'
         required: true
-        default: 'd2x'
+        default: 'd2s'
       ksu:
         description: 'هل تريد دمج KernelSU؟ (اكتب y أو n)'
         required: true
@@ -17,8 +17,10 @@ jobs:
     runs-on: ubuntu-22.04
 
     steps:
-    - name: 1. استدعاء السورس كود
+    - name: 1. استدعاء السورس كود والمجلدات الفرعية
       uses: actions/checkout@v4
+      with:
+        submodules: 'recursive'
 
     - name: 2. تجهيز بيئة لينكس (Ubuntu)
       run: |
@@ -30,7 +32,7 @@ jobs:
         chmod +x build.sh
         ./build.sh -m ${{ github.event.inputs.model }} -k ${{ github.event.inputs.ksu }}
 
-    - name: 4. رفع الكيرنل الجاهز للتحميل
+    - name: 4. التقاط ورفع ملف الـ ZIP الجاهز
       uses: actions/upload-artifact@v4
       with:
         name: Kernel-Ready-${{ github.event.inputs.model }}
