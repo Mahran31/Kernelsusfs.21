@@ -35,26 +35,23 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y build-essential flex bison libssl-dev libelf-dev bc curl zip git cpio python3 rsync lzop libncurses6 libncursesw6 gcc-aarch64-linux-gnu binutils-aarch64-linux-gnu llvm lld
-          
-          # تثبيت مكتبات ncurses5 المفقودة في النسخ الحديثة
           wget http://archive.ubuntu.com/ubuntu/pool/universe/n/ncurses/libtinfo5_6.3-2ubuntu0.1_amd64.deb && sudo dpkg -i libtinfo5_6.3-2ubuntu0.1_amd64.deb
           wget http://archive.ubuntu.com/ubuntu/pool/universe/n/ncurses/libncurses5_6.3-2ubuntu0.1_amd64.deb && sudo dpkg -i libncurses5_6.3-2ubuntu0.1_amd64.deb
 
-      - name: 3. إصلاح توافق KernelSU مع النواة (Hot-Fix)
+      - name: 3. الإصلاح الجراحي لتوافق KernelSU (Correct Fix)
         run: |
-          # تفعيل ميزة المفاتيح في ملف الإعدادات الرسمي
+          # تفعيل ميزة المفاتيح في الكيرنل
           echo "CONFIG_KEYS=y" >> arch/arm64/configs/exynos9820_defconfig
-          echo "CONFIG_KEYS_COMPAT=y" >> arch/arm64/configs/exynos9820_defconfig
           
-          # ترقيع كود KernelSU لتجاوز خطأ init_session_keyring في الأنوية القديمة
-          # هذا التعديل يضمن تخطي فحص المفاتيح إذا لم تكن مدعومة
+          # بدلاً من الاستبدال بـ NULL، سنقوم بتعريف متغير وهمي في بداية الملف
+          # هذا يحل مشكلة "undefined symbol" دون كسر قواعد لغة C
           if [ -f drivers/kernelsu/lsm_hooks.c ]; then
-            sed -i 's/init_session_keyring/NULL/g' drivers/kernelsu/lsm_hooks.c
+            sed -i '1i void* init_session_keyring;' drivers/kernelsu/lsm_hooks.c
           fi
 
-      - name: 4. الحقن الجراحي وتشغيل البناء
+      - name: 4. الحقن وتشغيل البناء باستخدام ld.lld
         run: |
-          # استخدام ld.lld وحقن مكتبات Neutron 18
+          # إصلاح المسارات واستخدام المترجم الصحيح لـ ThinLTO
           sed -i 's/O=out/O=out \\\nLD=ld.lld \\\nCROSS_COMPILE=aarch64-linux-gnu- \\\nCROSS_COMPILE_ARM32=arm-linux-gnueabi- \\\nLD_LIBRARY_PATH=$PWD\/toolchain\/neutron_18\/lib:$LD_LIBRARY_PATH/g' build.sh
           
           chmod +x build.sh
@@ -70,3 +67,4 @@ jobs:
           name: kernel-${{ github.event.inputs.model }}-zip
           path: build/out/${{ github.event.inputs.model }}/*.zip
           retention-days: 7
+
