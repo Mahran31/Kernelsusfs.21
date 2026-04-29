@@ -35,28 +35,46 @@ on:
 
 jobs:
   build-kernel:
-    runs-on: ubuntu-20.04 # 👈 هنا السر: استخدمنا البيئة الكلاسيكية المطابقة للمطور
+    runs-on: ubuntu-20.04 # استخدام بيئة المطور المستقرة
 
     steps:
     - name: 1. استدعاء السورس كود والمجلدات الفرعية
       uses: actions/checkout@v4
       with:
-        submodules: 'recursive'
+        submodules: 'recursive' # لسحب KernelSU-Next تلقائياً من المجلد الأزرق
 
-    - name: 2. تجهيز بيئة لينكس الأصلية (بدون أي تعارض)
+    - name: 2. تجهيز بيئة لينكس وتثبيت أدوات التجميع
       run: |
         sudo apt-get update
-        sudo apt-get install -y bc bison build-essential ccache curl flex g++-multilib gcc-multilib git gnupg gperf lib32ncurses5-dev lib32readline-dev lib32z1-dev liblz4-tool libncurses5 libncurses5-dev libsdl1.2-dev libssl-dev libxml2 libxml2-utils lzop pngcrush rsync schedtool squashfs-tools xsltproc zip zlib1g-dev python3 crossbuild-essential-arm64 crossbuild-essential-armel
+        sudo apt-get install -y bc bison build-essential ccache curl flex git gnupg gperf \
+        lib32ncurses5-dev lib32readline-dev lib32z1-dev liblz4-tool libncurses5 libncurses5-dev \
+        libsdl1.2-dev libssl-dev libxml2 libxml2-utils lzop pngcrush rsync schedtool \
+        squashfs-tools xsltproc zip zlib1g-dev python3 \
+        gcc-aarch64-linux-gnu gcc-arm-linux-gnueabi binutils-aarch64-linux-gnu binutils-arm-linux-gnueabi
 
-    - name: 3. تشغيل سكربت الطبخ (كما كتبه المطور 100%)
+    - name: 3. تشغيل سكربت الطبخ مع حل مشكلة الـ VDSO
       run: |
+        # تعريف أدوات الربط لضمان عدم حدوث خطأ (-EL: not found)
         export CROSS_COMPILE=aarch64-linux-gnu-
         export CROSS_COMPILE_ARM32=arm-linux-gnueabi-
+        export LD=aarch64-linux-gnu-ld
+        export AR=aarch64-linux-gnu-ar
+        export NM=aarch64-linux-gnu-nm
+        export OBJCOPY=aarch64-linux-gnu-objcopy
+        export OBJDUMP=aarch64-linux-gnu-objdump
+        export READELF=aarch64-linux-gnu-readelf
+        export STRIP=aarch64-linux-gnu-strip
+        
         chmod +x build.sh
-        ./build.sh -m ${{ github.event.inputs.model }} -k ${{ github.event.inputs.ksu }} -r ${{ github.event.inputs.recovery }}
+        
+        # إرسال المتغيرات مباشرة للسكربت لضمان وصولها لمحرك Make
+        ./build.sh -m ${{ github.event.inputs.model }} \
+                   -k ${{ github.event.inputs.ksu }} \
+                   -r ${{ github.event.inputs.recovery }}
 
-    - name: 4. التقاط ورفع ملف الـ ZIP الجاهز
+    - name: 4. رفع ملف الـ ZIP الجاهز (الكنز النهائي)
       uses: actions/upload-artifact@v4
       with:
         name: Kernel-Ready-${{ github.event.inputs.model }}
         path: build/out/${{ github.event.inputs.model }}/*.zip
+
