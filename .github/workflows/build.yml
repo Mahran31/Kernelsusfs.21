@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       model:
-        description: 'Phone model code'
+        description: 'اختر موديل الهاتف'
         required: true
         type: choice
         options:
@@ -18,7 +18,7 @@ on:
           - d2x
           - d2xks
       ksu:
-        description: 'Include KernelSU'
+        description: 'دمج KernelSU للنظام'
         required: false
         type: choice
         options:
@@ -26,7 +26,7 @@ on:
           - 'n'
         default: 'y'
       recovery:
-        description: 'Build for Android Recovery'
+        description: 'بناء للريكفري Android Recovery'
         required: false
         type: choice
         options:
@@ -37,30 +37,30 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    # نستخدم حاوية ubuntu 22.04 لضمان ثبات المكتبات وعدم انتظار 20.04
     container:
       image: ubuntu:22.04
     
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-      
+        with:
+          submodules: recursive
+
       - name: Install dependencies
         run: |
           apt-get update
           apt-get install -y \
-            build-essential \
-            flex \
-            bison \
-            libssl-dev \
-            libelf-dev \
-            bc \
-            curl \
-            zip \
-            git \
-            cpio
-      
-      - name: Run build script
+            build-essential flex bison libssl-dev libelf-dev bc curl zip git cpio \
+            python3 rsync lzop libncurses5 libncurses5-dev \
+            gcc-aarch64-linux-gnu binutils-aarch64-linux-gnu llvm
+
+      - name: Patch and Run build script
         run: |
+          # إصلاح مشكلة -EL: not found وحقن المكتبات المطلوبة لـ LLVMgold.so
+          # نقوم بتعديل سكربت المطور "داخل الحاوية" لإضافة الروابط الناقصة
+          sed -i 's/O=out/O=out \\\nLD=aarch64-linux-gnu-ld \\\nCROSS_COMPILE=aarch64-linux-gnu- \\\nCROSS_COMPILE_ARM32=arm-linux-gnueabi- \\\nLD_LIBRARY_PATH=$PWD\/toolchain\/neutron_18\/lib:$LD_LIBRARY_PATH/g' build.sh
+          
           chmod +x build.sh
           ./build.sh \
             --model "${{ github.event.inputs.model }}" \
@@ -82,4 +82,3 @@ jobs:
           name: kernel-${{ github.event.inputs.model }}-zip
           path: build/out/${{ github.event.inputs.model }}/*.zip
           retention-days: 30
-
