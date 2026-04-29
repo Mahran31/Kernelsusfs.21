@@ -4,29 +4,35 @@ on:
   workflow_dispatch:
     inputs:
       model:
-        description: 'اختر الموديل (مثال: d2s)'
+        description: 'اختر الموديل (مثال: d2s للنوت 10 بلس)'
         required: true
         default: 'd2s'
         type: choice
         options: [d2s, d2x, d1, beyond0lte, beyond1lte, beyond2lte, beyondx]
       ksu:
-        description: 'دمج KernelSU؟ (y/n)'
+        description: 'دمج KernelSU للنظام؟ (y/n)'
         required: true
         default: 'y'
         type: choice
         options: [y, n]
+      recovery:
+        description: 'هل تريد بناء كيرنل للريكفري TWRP بدلاً من النظام؟ (y/n)'
+        required: true
+        default: 'n'
+        type: choice
+        options: [n, y]
 
 jobs:
   build-kernel:
     runs-on: ubuntu-22.04
 
     steps:
-    - name: 1. جلب الكود
+    - name: 1. جلب السورس كود والمجلدات الفرعية
       uses: actions/checkout@v4
       with:
         submodules: 'recursive'
 
-    - name: 2. تثبيت الأدوات (النسخة المتوافقة)
+    - name: 2. تهيئة بيئة البناء وتثبيت المترجمات
       run: |
         sudo apt-get update
         sudo apt-get install -y bc bison build-essential ccache curl flex git gnupg gperf \
@@ -35,14 +41,18 @@ jobs:
 
     - name: 3. الحقن الجراحي وتشغيل البناء
       run: |
-        # هذه الخطوة هي الأهم: سنقوم بإضافة LD و CROSS_COMPILE مباشرة داخل متغير MAKE_ARGS في السكربت
-        # لكي يراها الكيرنل أثناء بناء الـ VDSO
+        # إصلاح المتغيرات داخل سكربت المطور لضمان عدم حدوث خطأ VDSO
+        # قمنا بحقن LD و CROSS_COMPILE مباشرة في متغير MAKE_ARGS
         sed -i 's/O=out/O=out \\\nLD=aarch64-linux-gnu-ld \\\nCROSS_COMPILE=aarch64-linux-gnu- \\\nCROSS_COMPILE_ARM32=arm-linux-gnueabi-/g' build.sh
         
         chmod +x build.sh
-        ./build.sh -m ${{ github.event.inputs.model }} -k ${{ github.event.inputs.ksu }} -r n
+        
+        # تشغيل السكربت مع تمرير الخيارات الثلاثة: الموديل، الروت، والريكفري
+        ./build.sh -m ${{ github.event.inputs.model }} \
+                   -k ${{ github.event.inputs.ksu }} \
+                   -r ${{ github.event.inputs.recovery }}
 
-    - name: 4. رفع الملف الناتج
+    - name: 4. رفع الملف الناتج (ZIP)
       uses: actions/upload-artifact@v4
       with:
         name: Kernel-Ready-${{ github.event.inputs.model }}
