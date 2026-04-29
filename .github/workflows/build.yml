@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       model:
-        description: 'اختر موديل الهاتف (مثال: d2s للنوت 10 بلس)'
+        description: 'اختر الموديل (مثال: d2s للنوت 10 بلس)'
         required: true
         default: 'd2s'
         type: choice
@@ -17,7 +17,7 @@ on:
           - 'beyond2lte'
           - 'beyondx'
       ksu:
-        description: 'هل تريد دمج KernelSU للنظام؟ (y=نعم / n=لا)'
+        description: 'دمج KernelSU للنظام؟ (y/n)'
         required: true
         default: 'y'
         type: choice
@@ -25,7 +25,7 @@ on:
           - 'y'
           - 'n'
       recovery:
-        description: 'هل تريد بناء كيرنل للريكفري TWRP بدلاً من النظام؟ (y=نعم / n=لا)'
+        description: 'بناء للريكفري TWRP؟ (y/n)'
         required: true
         default: 'n'
         type: choice
@@ -35,26 +35,26 @@ on:
 
 jobs:
   build-kernel:
-    runs-on: ubuntu-20.04 # استخدام بيئة المطور المستقرة
+    runs-on: ubuntu-latest # البديل الأسرع والأحدث المتاح
 
     steps:
-    - name: 1. استدعاء السورس كود والمجلدات الفرعية
+    - name: 1. جلب السورس كود والمجلدات الفرعية
       uses: actions/checkout@v4
       with:
-        submodules: 'recursive' # لسحب KernelSU-Next تلقائياً من المجلد الأزرق
+        submodules: 'recursive'
 
-    - name: 2. تجهيز بيئة لينكس وتثبيت أدوات التجميع
+    - name: 2. تهيئة بيئة بناء الأندرويد
       run: |
         sudo apt-get update
         sudo apt-get install -y bc bison build-essential ccache curl flex git gnupg gperf \
-        lib32ncurses5-dev lib32readline-dev lib32z1-dev liblz4-tool libncurses5 libncurses5-dev \
+        lib32ncurses-dev lib32readline-dev lib32z1-dev liblz4-tool libncurses5 libncurses5-dev \
         libsdl1.2-dev libssl-dev libxml2 libxml2-utils lzop pngcrush rsync schedtool \
         squashfs-tools xsltproc zip zlib1g-dev python3 \
         gcc-aarch64-linux-gnu gcc-arm-linux-gnueabi binutils-aarch64-linux-gnu binutils-arm-linux-gnueabi
 
-    - name: 3. تشغيل سكربت الطبخ مع حل مشكلة الـ VDSO
+    - name: 3. تنفيذ عملية الطبخ
       run: |
-        # تعريف أدوات الربط لضمان عدم حدوث خطأ (-EL: not found)
+        # تعريف المترجمات المساعدة لضمان التوافق مع النواة القديمة
         export CROSS_COMPILE=aarch64-linux-gnu-
         export CROSS_COMPILE_ARM32=arm-linux-gnueabi-
         export LD=aarch64-linux-gnu-ld
@@ -67,14 +67,13 @@ jobs:
         
         chmod +x build.sh
         
-        # إرسال المتغيرات مباشرة للسكربت لضمان وصولها لمحرك Make
+        # تشغيل السكربت بالخيارات المختارة
         ./build.sh -m ${{ github.event.inputs.model }} \
                    -k ${{ github.event.inputs.ksu }} \
                    -r ${{ github.event.inputs.recovery }}
 
-    - name: 4. رفع ملف الـ ZIP الجاهز (الكنز النهائي)
+    - name: 4. رفع الملف الناتج
       uses: actions/upload-artifact@v4
       with:
-        name: Kernel-Ready-${{ github.event.inputs.model }}
+        name: Kernel-${{ github.event.inputs.model }}
         path: build/out/${{ github.event.inputs.model }}/*.zip
-
