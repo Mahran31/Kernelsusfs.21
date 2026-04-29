@@ -1,84 +1,62 @@
-name: Kernel Build
+name: Build bubuKernel
 
 on:
   workflow_dispatch:
     inputs:
       model:
-        description: 'اختر موديل الهاتف'
+        description: 'اختر الموديل (مثال: d2s للنوت 10 بلس)'
         required: true
+        default: 'd2s'
         type: choice
-        options:
-          - beyond0lte
-          - beyond1lte
-          - beyond2lte
-          - beyondx
-          - d1
-          - d1xks
-          - d2s
-          - d2x
-          - d2xks
+        options: [d2s, d2x, d1, beyond0lte, beyond1lte, beyond2lte, beyondx]
       ksu:
-        description: 'دمج KernelSU للنظام'
-        required: false
-        type: choice
-        options:
-          - 'y'
-          - 'n'
+        description: 'دمج KernelSU للنظام؟ (y/n)'
+        required: true
         default: 'y'
-      recovery:
-        description: 'بناء للريكفري Android Recovery'
-        required: false
         type: choice
-        options:
-          - 'y'
-          - 'n'
+        options: [y, n]
+      recovery:
+        description: 'هل تريد بناء كيرنل للريكفري TWRP؟ (y/n)'
+        required: true
         default: 'n'
+        type: choice
+        options: [n, y]
 
 jobs:
-  build:
-    runs-on: ubuntu-latest
-    # نستخدم حاوية ubuntu 22.04 لضمان ثبات المكتبات وعدم انتظار 20.04
-    container:
-      image: ubuntu:22.04
-    
+  build-kernel:
+    runs-on: ubuntu-22.04
+
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-        with:
-          submodules: recursive
+    - name: 1. جلب السورس كود
+      uses: actions/checkout@v4
+      with:
+        submodules: 'recursive'
 
-      - name: Install dependencies
-        run: |
-          apt-get update
-          apt-get install -y \
-            build-essential flex bison libssl-dev libelf-dev bc curl zip git cpio \
-            python3 rsync lzop libncurses5 libncurses5-dev \
-            gcc-aarch64-linux-gnu binutils-aarch64-linux-gnu llvm
+    - name: 2. تثبيت الأدوات وتحسين بيئة المترجم
+      run: |
+        sudo apt-get update
+        # أضفنا حزمة llvm لتوفير ملفات الذهب (Gold Plugin)
+        sudo apt-get install -y bc bison build-essential ccache curl flex git gnupg gperf \
+        liblz4-tool libncurses5 libncurses5-dev libsdl1.2-dev libssl-dev libxml2 libxml2-utils \
+        lzop pngcrush rsync schedtool squashfs-tools xsltproc zip zlib1g-dev python3 \
+        gcc-aarch64-linux-gnu gcc-arm-linux-gnueabi binutils-aarch64-linux-gnu binutils-arm-linux-gnueabi llvm
 
-      - name: Patch and Run build script
-        run: |
-          # إصلاح مشكلة -EL: not found وحقن المكتبات المطلوبة لـ LLVMgold.so
-          # نقوم بتعديل سكربت المطور "داخل الحاوية" لإضافة الروابط الناقصة
-          sed -i 's/O=out/O=out \\\nLD=aarch64-linux-gnu-ld \\\nCROSS_COMPILE=aarch64-linux-gnu- \\\nCROSS_COMPILE_ARM32=arm-linux-gnueabi- \\\nLD_LIBRARY_PATH=$PWD\/toolchain\/neutron_18\/lib:$LD_LIBRARY_PATH/g' build.sh
-          
-          chmod +x build.sh
-          ./build.sh \
-            --model "${{ github.event.inputs.model }}" \
-            --ksu "${{ github.event.inputs.ksu }}" \
-            --recovery "${{ github.event.inputs.recovery }}"
-      
-      - name: Upload build artifacts
-        if: success()
-        uses: actions/upload-artifact@v4
-        with:
-          name: kernel-${{ github.event.inputs.model }}-build
-          path: build/out/${{ github.event.inputs.model }}/
-          retention-days: 30
-      
-      - name: Upload release zip
-        if: success()
-        uses: actions/upload-artifact@v4
-        with:
-          name: kernel-${{ github.event.inputs.model }}-zip
-          path: build/out/${{ github.event.inputs.model }}/*.zip
-          retention-days: 30
+    - name: 3. الحقن الذكي وحل مشكلة الملحقات (Plugin Fix)
+      run: |
+        # أولاً: نقوم بتعديل السكربت ليقبل الروابط الخارجية والملحقات
+        # قمنا بإضافة LD و CROSS_COMPILE ومعرف المكتبات LD_LIBRARY_PATH
+        sed -i 's/O=out/O=out \\\nLD=aarch64-linux-gnu-ld \\\nCROSS_COMPILE=aarch64-linux-gnu- \\\nCROSS_COMPILE_ARM32=arm-linux-gnueabi- \\\nLD_LIBRARY_PATH=$PWD\/toolchain\/neutron_18\/lib:$LD_LIBRARY_PATH/g' build.sh
+        
+        chmod +x build.sh
+        
+        # ثانياً: تشغيل البناء
+        # السكربت سيقوم بتحميل المترجم وعمل Patch للـ Glibc تلقائياً كما هو مبرمج
+        ./build.sh -m ${{ github.event.inputs.model }} \
+                   -k ${{ github.event.inputs.ksu }} \
+                   -r ${{ github.event.inputs.recovery }}
+
+    - name: 4. رفع الكيرنل الجاهز (ZIP)
+      uses: actions/upload-artifact@v4
+      with:
+        name: Kernel-Ready-${{ github.event.inputs.model }}
+        path: build/out/${{ github.event.inputs.model }}/*.zip
