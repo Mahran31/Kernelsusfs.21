@@ -23,28 +23,26 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
-    container:
-      image: ubuntu:22.04
-    
+    runs-on: ubuntu-22.04 # نستخدم السيرفر المباشر بدلاً من الحاوية لتجنب نقص Git
+
     steps:
-      - name: Checkout repository
+      - name: 1. جلب السورس كود والمجلدات الفرعية
         uses: actions/checkout@v4
         with:
-          submodules: recursive
+          submodules: recursive # الآن ستعمل لأن Git موجود أصلاً في السيرفر
 
-      - name: Install dependencies
+      - name: 2. تثبيت كافة أدوات الطبخ والمترجمات
         run: |
-          apt-get update
-          apt-get install -y \
+          sudo apt-get update
+          sudo apt-get install -y \
             build-essential flex bison libssl-dev libelf-dev bc curl zip git cpio \
             python3 rsync lzop libncurses5 libncurses5-dev \
             gcc-aarch64-linux-gnu binutils-aarch64-linux-gnu llvm lld
 
-      - name: Patch and Run build script
+      - name: 3. الحقن الجراحي وتشغيل البناء (حل مشكلة ThinLTO و VDSO)
         run: |
-          # التعديل الذهبي: نستخدم ld.lld بدلاً من aarch64-linux-gnu-ld
-          # هذا سيحل مشكلة ThinLTO ومشكلة الـ VDSO معاً
+          # نستخدم ld.lld ليفهم خيارات المطور المتطورة (مثل --thinlto-cache-dir)
+          # ونحقن المسارات لضمان وصول المترجم لكل المكتبات
           sed -i 's/O=out/O=out \\\nLD=ld.lld \\\nCROSS_COMPILE=aarch64-linux-gnu- \\\nCROSS_COMPILE_ARM32=arm-linux-gnueabi- \\\nLD_LIBRARY_PATH=$PWD\/toolchain\/neutron_18\/lib:$LD_LIBRARY_PATH/g' build.sh
           
           chmod +x build.sh
@@ -53,7 +51,7 @@ jobs:
             --ksu "${{ github.event.inputs.ksu }}" \
             --recovery "${{ github.event.inputs.recovery }}"
       
-      - name: Upload release zip
+      - name: 4. رفع الملف الناتج (ZIP)
         if: success()
         uses: actions/upload-artifact@v4
         with:
