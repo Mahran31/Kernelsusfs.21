@@ -23,26 +23,27 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-22.04 # نستخدم السيرفر المباشر بدلاً من الحاوية لتجنب نقص Git
+    runs-on: ubuntu-latest # سنستخدم نظام 24.04 مباشرة للحصول على أحدث GLIBC
 
     steps:
-      - name: 1. جلب السورس كود والمجلدات الفرعية
+      - name: 1. جلب السورس كود
         uses: actions/checkout@v4
         with:
-          submodules: recursive # الآن ستعمل لأن Git موجود أصلاً في السيرفر
+          submodules: recursive
 
-      - name: 2. تثبيت كافة أدوات الطبخ والمترجمات
+      - name: 2. تثبيت الأدوات وإصلاح مكتبات Ubuntu 24.04
         run: |
           sudo apt-get update
-          sudo apt-get install -y \
-            build-essential flex bison libssl-dev libelf-dev bc curl zip git cpio \
-            python3 rsync lzop libncurses5 libncurses5-dev \
-            gcc-aarch64-linux-gnu binutils-aarch64-linux-gnu llvm lld
+          # تثبيت الأدوات الأساسية
+          sudo apt-get install -y build-essential flex bison libssl-dev libelf-dev bc curl zip git cpio python3 rsync lzop libncurses6 libncursesw6 gcc-aarch64-linux-gnu binutils-aarch64-linux-gnu llvm lld
+          
+          # الحل السحري لمشكلة libncurses5 في Ubuntu 24.04 (تحميلها من مستودعات 22.04)
+          wget http://archive.ubuntu.com/ubuntu/pool/universe/n/ncurses/libtinfo5_6.3-2ubuntu0.1_amd64.deb && sudo dpkg -i libtinfo5_6.3-2ubuntu0.1_amd64.deb
+          wget http://archive.ubuntu.com/ubuntu/pool/universe/n/ncurses/libncurses5_6.3-2ubuntu0.1_amd64.deb && sudo dpkg -i libncurses5_6.3-2ubuntu0.1_amd64.deb
 
-      - name: 3. الحقن الجراحي وتشغيل البناء (حل مشكلة ThinLTO و VDSO)
+      - name: 3. الحقن الجراحي وتشغيل البناء
         run: |
-          # نستخدم ld.lld ليفهم خيارات المطور المتطورة (مثل --thinlto-cache-dir)
-          # ونحقن المسارات لضمان وصول المترجم لكل المكتبات
+          # نستخدم ld.lld المتوافق مع Neutron 18 ونحقن مسار المكتبات
           sed -i 's/O=out/O=out \\\nLD=ld.lld \\\nCROSS_COMPILE=aarch64-linux-gnu- \\\nCROSS_COMPILE_ARM32=arm-linux-gnueabi- \\\nLD_LIBRARY_PATH=$PWD\/toolchain\/neutron_18\/lib:$LD_LIBRARY_PATH/g' build.sh
           
           chmod +x build.sh
@@ -51,10 +52,10 @@ jobs:
             --ksu "${{ github.event.inputs.ksu }}" \
             --recovery "${{ github.event.inputs.recovery }}"
       
-      - name: 4. رفع الملف الناتج (ZIP)
+      - name: 4. رفع ملف الـ ZIP الناتج
         if: success()
         uses: actions/upload-artifact@v4
         with:
           name: kernel-${{ github.event.inputs.model }}-zip
           path: build/out/${{ github.event.inputs.model }}/*.zip
-          retention-days: 30
+          retention-days: 7
